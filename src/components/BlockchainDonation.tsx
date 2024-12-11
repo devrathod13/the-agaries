@@ -89,18 +89,13 @@ const SUPPORTED_NETWORKS: { [key: string]: NetworkConfig } = {
     icon: <FaEthereum className="text-blue-500" />
   }
 };
-
-// Unused variables handling
-// eslint-disable-next-line @typescript-eslint/no-unused-va
-
-// Comprehensive error handling type
 type ErrorDetails = {
   code?: number;
   message: string;
 };
 
-// Error handling type
-type ErrorHandler = (error: ErrorDetails) => void;
+// Remove unused ErrorHandler type
+// type ErrorHandler = (error: ErrorDetails) => void;
 
 // Define a specific type for the event listener
 type EthereumChainId = string;
@@ -118,7 +113,7 @@ type EthereumChainParams = {
   blockExplorerUrls?: string[];
 };
 
-export default function BlockchainDonation() {
+const BlockchainDonation: React.FC = () => {
   const [account, setAccount] = useState<string | null>(null);
   const [balance, setBalance] = useState<string>('0');
   const [donationAmount, setDonationAmount] = useState<string>('0.01');
@@ -133,11 +128,9 @@ export default function BlockchainDonation() {
     message: ''
   });
   const [networkInfo, setNetworkInfo] = useState<{
-    chainId: string | null,
-    networkName: string | null
+    chainId: string | null
   }>({
-    chainId: null,
-    networkName: null
+    chainId: null
   });
   const [currentContractAddress, setCurrentContractAddress] = useState<string>(CONTRACT_ADDRESSES.sepolia);
 
@@ -150,18 +143,199 @@ export default function BlockchainDonation() {
     networkName: string;
   };
 
-  // Donation receipt state
+  // Donation receipt state with explicit logging
   const [donationReceipt, setDonationReceipt] = useState<DonationReceipt | null>(null);
+  
+  // Log donation receipt whenever it changes
+  useEffect(() => {
+    if (donationReceipt) {
+      console.log('Donation Receipt Updated:', donationReceipt);
+    }
+  }, [donationReceipt]);
 
   // Comprehensive Error Handler with useCallback
-  const handleError: ErrorHandler = useCallback((error: ErrorDetails) => {
+  const handleError = useCallback((error: ErrorDetails) => {
     // Log the error for debugging purposes
     console.error('Blockchain Donation Error:', error);
     setError(error.message);
   }, []);
 
+  // Account Change Handler with useCallback
+  const handleAccountsChanged = useCallback((accounts: string[]) => {
+    if (accounts.length > 0) {
+      // Set the first account as the current account
+      setAccount(accounts[0]);
+    } else {
+      // No accounts connected, reset the account state
+      setAccount(null);
+    }
+  }, []);
+
+  // Network Change Handler with useCallback
+  const handleNetworkChanged = useCallback((chainId: EthereumChainId) => {
+    // Convert chainId to a number and find corresponding network
+    const numericChainId = parseInt(chainId, 16);
+    
+    // Directly use the contract address logic without dependencies
+    const newContractAddress = Object.values(SUPPORTED_NETWORKS).find(
+      (network) => network.chainId === numericChainId
+    )?.contractAddress || CONTRACT_ADDRESSES.sepolia;
+
+    setCurrentContractAddress(newContractAddress);
+  }, []);
+
+  // Fetch total donations with useCallback
+  const fetchTotalDonations = useCallback(async (provider?: ethers.BrowserProvider) => {
+    try {
+      // Use provided provider or create a new one
+      const currentProvider = provider || (window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null);
+      
+      if (!currentProvider) {
+        throw new Error('Provider not available');
+      }
+
+      // Implement donation fetching logic
+      // This is a placeholder - replace with actual implementation
+      const totalDonations = '0'; // Placeholder
+      setTotalDonations(totalDonations);
+      return totalDonations;
+    } catch (error: unknown) {
+      handleError(error as ErrorDetails);
+    }
+  }, [handleError]);
+
+  // Account and Network Change Listener
+  useEffect(() => {
+    // Check if ethereum is available
+    if (window.ethereum) {
+      // Add listeners
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleNetworkChanged);
+
+      // Cleanup function
+      return () => {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleNetworkChanged);
+      };
+    }
+  }, [handleAccountsChanged, handleNetworkChanged]);
+
+  // Donation processing effect
+  useEffect(() => {
+    if (account) {
+      fetchTotalDonations();
+    }
+  }, [account, fetchTotalDonations]);
+
+  // Blockchain donation handler with useCallback
+  const handleBlockchainDonation = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Validate wallet connection
+      if (!account) {
+        throw new Error('Please connect your wallet first');
+      }
+
+      // Validate donation amount
+      const parsedAmount = parseFloat(donationAmount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        throw new Error('Invalid donation amount. Please enter a positive number.');
+      }
+
+      // Provider and network validation
+      if (!window.ethereum) {
+        throw new Error('Ethereum provider not found. Please install MetaMask.');
+      }
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      
+      // Validate network
+      const networkInfo = await validateNetwork(provider);
+
+      // Create contract instance with CURRENT contract address
+      const contract = new ethers.Contract(
+        currentContractAddress, 
+        CONTRACT_ABI, 
+        signer
+      );
+
+      // Perform donation
+      const tx = await contract.donate(`Donation on ${networkInfo.chainId}`, {
+        value: ethers.parseEther(donationAmount)
+      });
+
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+
+      // Create donation receipt
+      const _donationReceipt: DonationReceipt = {
+        transactionHash: receipt.hash,
+        amount: donationAmount,
+        timestamp: Date.now(),
+        donorAddress: account,
+        networkName: networkInfo.chainId
+      };
+
+      // Update states
+      setDonationReceipt(_donationReceipt);
+      setTotalDonations((prevTotal) => 
+        (parseFloat(prevTotal) + parsedAmount).toString()
+      );
+
+      // Reset donation amount
+      setDonationAmount('0.01');
+
+    } catch (err: unknown) {
+      // Detailed error handling
+      let errorMessage = 'An unexpected error occurred';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        // Specific error type handling
+        if (err.message.includes('insufficient funds')) {
+          errorMessage = 'Insufficient funds. Please check your wallet balance.';
+        } else if (err.message.includes('user rejected transaction')) {
+          errorMessage = 'Transaction was cancelled by user.';
+        } else if (err.message.includes('network')) {
+          errorMessage = 'Please connect to the Sepolia Testnet.';
+        }
+      }
+
+      setError(errorMessage);
+      console.error('Donation Error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [account, donationAmount, currentContractAddress, validateNetwork]);
+
+  // Process donation function with optimized dependencies
+  const processDonation = useCallback(async () => {
+    try {
+      // Log the donation processing attempt
+      console.log('Initiating donation processing');
+      
+      // Call blockchain donation handler
+      const receipt = await handleBlockchainDonation();
+      
+      if (receipt) {
+        // Explicitly use and log donationReceipt
+        console.log('Donation processed successfully', receipt);
+        return receipt;
+      }
+      
+      console.log('Donation processing did not result in a receipt');
+      return null;
+    } catch (error) {
+      console.error('Donation processing error:', error);
+      return null;
+    }
+  }, [handleBlockchainDonation]);
+
   // Comprehensive Network Validation
-  const validateNetwork = async (provider: ethers.BrowserProvider) => {
+  const validateNetwork = useCallback(async (provider: ethers.BrowserProvider) => {
     try {
       const network = await provider.getNetwork();
       const expectedChainId = network.chainId;
@@ -174,69 +348,13 @@ export default function BlockchainDonation() {
       }
       
       return {
-        chainId: expectedChainId.toString(),
-        networkName: 'Sepolia Testnet'
+        chainId: expectedChainId.toString()
       };
     } catch (error) {
       console.error('Network Validation Error:', error);
       throw error;
     }
-  };
-
-  // Account Change Handler
-  const handleAccountsChanged = useCallback((...accounts: string[]) => {
-    if (accounts.length > 0) {
-      // Set the first account as the current account
-      setAccount(accounts[0]);
-    } else {
-      // No accounts connected, reset the account state
-      setAccount(null);
-    }
   }, []);
-
-  // Network Change Handler
-  const handleNetworkChanged = useCallback((chainId: EthereumChainId) => {
-    // Convert chainId to a number and find corresponding network
-    const numericChainId = parseInt(chainId, 16);
-    const networkName = Object.values(SUPPORTED_NETWORKS).find(
-      network => network.chainId === numericChainId
-    )?.name || 'Unknown Network';
-
-    setNetworkInfo({
-      chainId: chainId,
-      networkName: networkName
-    });
-
-    // Update contract address based on network
-    const newContractAddress = Object.values(SUPPORTED_NETWORKS).find(
-      network => network.chainId === numericChainId
-    )?.contractAddress || CONTRACT_ADDRESSES.sepolia;
-
-    setCurrentContractAddress(newContractAddress);
-  }, []);
-
-  // Account and Network Change Listener
-  useEffect(() => {
-    // Check if ethereum is available
-    if (!window.ethereum) return;
-
-    // Event listeners
-
-
-    const handleNetworkChangedWrapper = (...args: [string]) => {
-      handleNetworkChanged(...args);
-    };
-
-    // Add event listeners
-    window.ethereum.on('accountsChanged', handleNetworkChangedWrapper);
-    window.ethereum.on('chainChanged', handleNetworkChangedWrapper);
-
-    // Cleanup function to remove listeners
-    return () => {
-      window.ethereum?.removeListener('accountsChanged', handleNetworkChangedWrapper);
-      window.ethereum?.removeListener('chainChanged', handleNetworkChangedWrapper);
-    };
-  }, [handleNetworkChanged, handleError]);
 
   // Automatic Network Switch Function
   const switchToSepoliaNetwork = async () => {
@@ -272,6 +390,7 @@ export default function BlockchainDonation() {
           });
           return true;
         } catch (error: unknown) {
+          console.error('Failed to add Sepolia Network:', error);
           setError('Failed to add Sepolia Network. Please add manually.');
           return false;
         }
@@ -322,8 +441,7 @@ export default function BlockchainDonation() {
 
         // Set network info
         setNetworkInfo({
-          chainId: '0xaa36a7',
-          networkName: 'Sepolia Testnet'
+          chainId: '0xaa36a7'
         });
 
         // Set current contract address
@@ -331,90 +449,6 @@ export default function BlockchainDonation() {
       }
     } catch (error: unknown) {
       handleError(error as ErrorDetails);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Enhanced Blockchain Donation Handler
-  const handleBlockchainDonation = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Validate wallet connection
-      if (!account) {
-        throw new Error('Please connect your wallet first');
-      }
-
-      // Validate donation amount
-      const parsedAmount = parseFloat(donationAmount);
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        throw new Error('Invalid donation amount. Please enter a positive number.');
-      }
-
-      // Provider and network validation
-      if (!window.ethereum) {
-        throw new Error('Ethereum provider not found. Please install MetaMask.');
-      }
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      
-      // Validate network
-      const networkInfo = await validateNetwork(provider);
-
-      // Create contract instance with CURRENT contract address
-      const contract = new ethers.Contract(
-        currentContractAddress, 
-        CONTRACT_ABI, 
-        signer
-      );
-
-      // Perform donation
-      const tx = await contract.donate(`Donation on ${networkInfo.networkName}`, {
-        value: ethers.parseEther(donationAmount)
-      });
-
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
-
-      // Create donation receipt
-      const donationReceipt: DonationReceipt = {
-        transactionHash: receipt.hash,
-        amount: donationAmount,
-        timestamp: Date.now(),
-        donorAddress: account,
-        networkName: networkInfo.networkName
-      };
-
-      // Update states
-      setDonationReceipt(donationReceipt);
-      setTotalDonations((prevTotal) => 
-        (parseFloat(prevTotal) + parsedAmount).toString()
-      );
-
-      // Reset donation amount
-      setDonationAmount('0.01');
-
-    } catch (err: unknown) {
-      // Detailed error handling
-      let errorMessage = 'An unexpected error occurred';
-      
-      if (err instanceof Error) {
-        errorMessage = err.message;
-        
-        // Specific error type handling
-        if (err.message.includes('insufficient funds')) {
-          errorMessage = 'Insufficient funds. Please check your wallet balance.';
-        } else if (err.message.includes('user rejected transaction')) {
-          errorMessage = 'Transaction was cancelled by user.';
-        } else if (err.message.includes('network')) {
-          errorMessage = 'Please connect to the Sepolia Testnet.';
-        }
-      }
-
-      setError(errorMessage);
-      console.error('Donation Error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -463,31 +497,6 @@ export default function BlockchainDonation() {
     }
   };
 
-  // Fetch total donations with useCallback to stabilize the function
-  const fetchTotalDonations = useCallback(async (provider?: ethers.BrowserProvider) => {
-    try {
-      // Use provided provider or create a new one
-      const currentProvider = provider || (window.ethereum ? new ethers.BrowserProvider(window.ethereum) : null);
-      
-      if (!currentProvider) {
-        throw new Error('Ethereum provider not found. Please install MetaMask.');
-      }
-
-      console.group('Donation Fetch Diagnostics');
-      console.log('Contract Address:', currentContractAddress);
-      // Add more diagnostic logging as needed
-      console.groupEnd();
-    } catch (error: unknown) {
-      handleError(error as ErrorDetails);
-    }
-  }, [currentContractAddress, handleError]);
-
-  useEffect(() => {
-    if (account) {
-      fetchTotalDonations();
-    }
-  }, [account, fetchTotalDonations]);
-
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8">
       <div className="bg-black/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 md:p-8 w-full max-w-xl mx-auto">
@@ -527,10 +536,10 @@ export default function BlockchainDonation() {
         {donationMethod === 'blockchain' && (
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 sm:p-6">
             {/* Network Warning */}
-            {networkInfo.networkName && (
+            {networkInfo.chainId && (
               <div className="mb-4 text-center">
                 <p className="text-white/70 text-sm sm:text-base">
-                  Connected to {networkInfo.networkName}
+                  Connected to {networkInfo.chainId}
                 </p>
               </div>
             )}
@@ -575,7 +584,7 @@ export default function BlockchainDonation() {
                 </div>
 
                 <button 
-                  onClick={handleBlockchainDonation}
+                  onClick={processDonation}
                   disabled={isLoading}
                   className={`w-full btn btn-secondary flex items-center justify-center text-sm sm:text-base ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -669,4 +678,6 @@ export default function BlockchainDonation() {
       </div>
     </div>
   );
-}
+};
+
+export default BlockchainDonation;
