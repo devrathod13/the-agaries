@@ -160,6 +160,39 @@ const BlockchainDonation: React.FC = () => {
     setError(error.message);
   }, []);
 
+  // Fetch account balance
+  const fetchAccountBalance = useCallback(async (accountAddress?: string | null) => {
+    try {
+      // Reset balance to 0 if no account
+      if (!accountAddress) {
+        setBalance('0');
+        return;
+      }
+
+      // Create provider
+      const provider = window.ethereum 
+        ? new ethers.BrowserProvider(window.ethereum)
+        : null;
+
+      if (!provider) {
+        setBalance('0');
+        return;
+      }
+
+      // Fetch balance
+      const balanceInWei = await provider.getBalance(accountAddress);
+      
+      // Convert balance from Wei to Ether and format
+      const balanceInEther = ethers.formatEther(balanceInWei);
+      
+      // Update balance state
+      setBalance(balanceInEther);
+    } catch (error) {
+      console.error('Error fetching account balance:', error);
+      setBalance('0');
+    }
+  }, []);
+
   // Account Change Handler with useCallback
   const handleAccountsChanged = useCallback((...args: string[]) => {
     // Ensure we're working with an array of accounts
@@ -168,11 +201,14 @@ const BlockchainDonation: React.FC = () => {
     if (accounts.length > 0) {
       // Set the first account as the current account
       setAccount(accounts[0]);
+      // Fetch balance for the new account
+      fetchAccountBalance(accounts[0]);
     } else {
       // No accounts connected, reset the account state
       setAccount(null);
+      setBalance('0');
     }
-  }, []);
+  }, [fetchAccountBalance]);
 
   // Network Change Handler with useCallback
   const handleNetworkChanged = useCallback((chainId: EthereumChainId) => {
@@ -230,8 +266,9 @@ const BlockchainDonation: React.FC = () => {
   useEffect(() => {
     if (account) {
       fetchTotalDonations();
+      fetchAccountBalance(account);
     }
-  }, [account, fetchTotalDonations]);
+  }, [account, fetchTotalDonations, fetchAccountBalance]);
 
   // Comprehensive Network Validation
   const validateNetwork = useCallback(async (provider: ethers.BrowserProvider) => {
@@ -499,8 +536,6 @@ const BlockchainDonation: React.FC = () => {
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 text-center text-white">
           Donate to Support Farmers
         </h2>
-        
-        {/* Network Connection Guide */}
         {error && error.includes('contract') && (
           <div className="text-center mt-4">
             <button 
@@ -511,14 +546,12 @@ const BlockchainDonation: React.FC = () => {
             </button>
           </div>
         )}
-        
-        {/* Donation Method Selector */}
         <div className="flex justify-center mb-4 space-x-2">
           <button
             onClick={() => setDonationMethod('blockchain')}
             className={`px-3 py-2 sm:px-4 sm:py-2 rounded text-sm sm:text-base ${donationMethod === 'blockchain' ? 'bg-blue-500/70 text-white' : 'bg-white/20 text-white/70'}`}
           >
-            <FaEthereum className="inline mr-1 sm:mr-2" /> Blockchain
+            <FaEthereum className="inline mr-1 sm:mr-2" /> Wallet
           </button>
           <button
             onClick={() => setDonationMethod('cash')}
@@ -531,15 +564,6 @@ const BlockchainDonation: React.FC = () => {
         {/* Blockchain Donation Form */}
         {donationMethod === 'blockchain' && (
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 sm:p-6">
-            {/* Network Warning */}
-            {networkInfo.chainId && (
-              <div className="mb-4 text-center">
-                <p className="text-white/70 text-sm sm:text-base">
-                  Connected to {networkInfo.chainId}
-                </p>
-              </div>
-            )}
-
             {error && (
               <div className="bg-red-500/20 border border-red-500 text-red-300 p-3 rounded-lg mb-4 text-center flex items-center justify-center">
                 <FaExclamationTriangle className="mr-2" />
@@ -655,22 +679,7 @@ const BlockchainDonation: React.FC = () => {
           </form>
         )}
 
-        {/* Error Display */}
-        {error && (
-          <div className="mt-4 bg-red-500/20 border border-red-500 text-red-300 p-3 rounded-lg text-center text-sm sm:text-base">
-            <strong className="font-bold">Error: </strong>
-            <span className="block">{error}</span>
-          </div>
-        )}
-        
-        <div className="text-center mt-4">
-          <p className="text-white/80 mb-2">
-            &quot;Empowering farmers through blockchain technology&quot;
-          </p>
-          <p className="text-white/80">
-            &quot;Every donation brings hope and sustainable change&quot;
-          </p>
-        </div>
+        {/* Removed Donation Impact Visualization */}
       </div>
     </div>
   );
