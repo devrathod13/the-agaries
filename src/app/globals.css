@@ -2,20 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-primary: 59, 130, 246;     /* Blue */
+    --color-secondary: 16, 185, 129;   /* Green */
+    --color-text-dark: 31, 41, 55;     /* Gray-900 */
+    --color-text-light: 243, 244, 246; /* Gray-100 */
+    --color-background: 249, 250, 251; /* Gray-50 */
   }
 }
 
+@layer components {
+  /* Button Styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 
+           border border-transparent text-base font-medium 
+           rounded-full shadow-lg transition-all duration-300 
+           hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply text-white hover:opacity-90 focus:ring-blue-500;
+    background: linear-gradient(135deg, rgb(59, 130, 246), rgb(37, 99, 235));
+    background-size: 200% 200%;
+    animation: gradient-shift 5s ease infinite;
+  }
+
+  .btn-secondary {
+    @apply text-white hover:opacity-90 focus:ring-green-500;
+    background: linear-gradient(135deg, rgb(16, 185, 129), rgb(5, 150, 105));
+    background-size: 200% 200%;
+    animation: gradient-shift 5s ease infinite;
+  }
+
+  /* Card Styles */
+  .card {
+    @apply bg-white rounded-2xl shadow-md hover:shadow-xl 
+           transition-all duration-300 transform hover:-translate-y-2 
+           overflow-hidden;
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  @keyframes subtle-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(var(--color-background), 1);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(var(--color-primary), 0.7);
+    border-radius: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--color-primary), 1);
+  }
+}
+
+/* Global Styles */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply text-gray-800 antialiased custom-scrollbar;
+  font-family: 'Geist', sans-serif;
+  background-color: rgb(var(--color-background));
+  line-height: 1.6;
+}
+
+::selection {
+  background-color: rgba(var(--color-primary), 0.2);
+  color: rgb(var(--color-primary));
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold text-gray-900;
+  letter-spacing: -0.025em;
+}
+
+/* Responsive Typography */
+@screen md {
+  html {
+    font-size: 18px;
+  }
+}
+
+@screen lg {
+  html {
+    font-size: 20px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text-dark: 243, 244, 246;     /* Inverted */
+    --color-text-light: 31, 41, 55;       /* Inverted */
+    --color-background: 17, 24, 39;       /* Dark background */
+  }
+
+  body {
+    @apply bg-gray-900 text-gray-100;
+  }
 }
