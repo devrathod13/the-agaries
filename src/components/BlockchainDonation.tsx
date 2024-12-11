@@ -217,8 +217,11 @@ const BlockchainDonation: React.FC = () => {
 
       // Cleanup function
       return () => {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum.removeListener('chainChanged', handleNetworkChanged);
+        // Only remove listeners if ethereum is available
+        if (window.ethereum) {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+          window.ethereum.removeListener('chainChanged', handleNetworkChanged);
+        }
       };
     }
   }, [handleAccountsChanged, handleNetworkChanged]);
@@ -230,24 +233,33 @@ const BlockchainDonation: React.FC = () => {
     }
   }, [account, fetchTotalDonations]);
 
+  // Comprehensive Network Validation
+  const validateNetwork = useCallback(async (provider: ethers.BrowserProvider) => {
+    try {
+      const network = await provider.getNetwork();
+      const expectedChainId = network.chainId;
+      
+      // Supported network chain IDs
+      const SEPOLIA_CHAIN_ID = BigInt(11155111);
+      
+      if (expectedChainId !== SEPOLIA_CHAIN_ID) {
+        throw new Error(`Incorrect network. Please switch to Sepolia Testnet.`);
+      }
+      
+      return {
+        chainId: expectedChainId.toString()
+      };
+    } catch (error) {
+      console.error('Network Validation Error:', error);
+      throw error;
+    }
+  }, []);
+
   // Blockchain donation handler with useCallback
   const handleBlockchainDonation = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
     
     try {
-      // Validate wallet connection
-      if (!account) {
-        throw new Error('Please connect your wallet first');
-      }
-
-      // Validate donation amount
-      const parsedAmount = parseFloat(donationAmount);
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        throw new Error('Invalid donation amount. Please enter a positive number.');
-      }
-
-      // Provider and network validation
       if (!window.ethereum) {
         throw new Error('Ethereum provider not found. Please install MetaMask.');
       }
@@ -277,18 +289,20 @@ const BlockchainDonation: React.FC = () => {
         transactionHash: receipt.hash,
         amount: donationAmount,
         timestamp: Date.now(),
-        donorAddress: account,
-        networkName: networkInfo.chainId
+        donorAddress: account || 'Unknown Donor',
+        networkName: networkInfo.chainId || 'Unknown Network'
       };
 
       // Update states
       setDonationReceipt(_donationReceipt);
       setTotalDonations((prevTotal) => 
-        (parseFloat(prevTotal) + parsedAmount).toString()
+        (parseFloat(prevTotal || '0') + parseFloat(donationAmount)).toString()
       );
 
       // Reset donation amount
       setDonationAmount('0.01');
+
+      return receipt;
 
     } catch (err: unknown) {
       // Detailed error handling
@@ -309,6 +323,7 @@ const BlockchainDonation: React.FC = () => {
 
       setError(errorMessage);
       console.error('Donation Error:', err);
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -336,28 +351,6 @@ const BlockchainDonation: React.FC = () => {
       return null;
     }
   }, [handleBlockchainDonation]);
-
-  // Comprehensive Network Validation
-  const validateNetwork = useCallback(async (provider: ethers.BrowserProvider) => {
-    try {
-      const network = await provider.getNetwork();
-      const expectedChainId = network.chainId;
-      
-      // Supported network chain IDs
-      const SEPOLIA_CHAIN_ID = BigInt(11155111);
-      
-      if (expectedChainId !== SEPOLIA_CHAIN_ID) {
-        throw new Error(`Incorrect network. Please switch to Sepolia Testnet.`);
-      }
-      
-      return {
-        chainId: expectedChainId.toString()
-      };
-    } catch (error) {
-      console.error('Network Validation Error:', error);
-      throw error;
-    }
-  }, []);
 
   // Automatic Network Switch Function
   const switchToSepoliaNetwork = async () => {
