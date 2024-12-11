@@ -588,6 +588,18 @@ const BlockchainDonation: React.FC = () => {
                   <p className="text-white/70 mt-2 text-sm sm:text-base">Balance: {balance} ETH</p>
                 </div>
 
+                {networkInfo.chainId && (
+                  <div className="mb-4 text-center">
+                    <p className="text-white/70 text-sm sm:text-base">
+                      Connected Network: {
+                        SUPPORTED_NETWORKS[networkInfo.chainId.toLowerCase()] 
+                          ? SUPPORTED_NETWORKS[networkInfo.chainId.toLowerCase()].name 
+                          : 'Unknown Network'
+                      }
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-white/70 mb-2 text-sm sm:text-base">
                     Donation Amount (ETH)
