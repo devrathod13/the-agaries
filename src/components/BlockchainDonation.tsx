@@ -161,7 +161,10 @@ const BlockchainDonation: React.FC = () => {
   }, []);
 
   // Account Change Handler with useCallback
-  const handleAccountsChanged = useCallback((accounts: string[]) => {
+  const handleAccountsChanged = useCallback((...args: string[]) => {
+    // Ensure we're working with an array of accounts
+    const accounts = Array.isArray(args[0]) ? args[0] : args;
+    
     if (accounts.length > 0) {
       // Set the first account as the current account
       setAccount(accounts[0]);
