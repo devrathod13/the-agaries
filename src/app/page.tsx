@@ -19,7 +19,7 @@ export default function Home() {
         <div className="grid gap-12 items-center">
           <div className="text-center space-y-6">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white">
-              Empowering Salt Farmers of India
+              Empowering Salt Farmers
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-white/90 leading-relaxed max-w-2xl mx-auto">
               We&apos;re dedicated to supporting traditional salt farmers, providing sustainable solutions and improving their quality of life.

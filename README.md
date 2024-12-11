@@ -1,4 +1,4 @@
-# The Agaries: Blockchain-Powered Donation Platform
+# The Agariyas: Blockchain-Powered Donation Platform
 
 ## Blockchain Integration Overview
 

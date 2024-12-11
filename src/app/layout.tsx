@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "The Agaries - Empowering Salt Farmers",
+  title: "The Agariyas - Empowering Salt Farmers",
   description: "Supporting traditional salt farmers of India through sustainable development",
   icons: {
     icon: "/favicon.ico",
@@ -34,7 +34,7 @@ export default function RootLayout({
           <div className="container mx-auto px-4 py-3 flex justify-between items-center">
             <Link href="/" className="flex items-center space-x-2">
               <FaHeart className="text-red-500 text-2xl" />
-              <span className="text-2xl font-bold text-gray-800">The Agaries</span>
+              <span className="text-2xl font-bold text-gray-800">The Agariyas</span>
             </Link>
             
             <nav className="hidden md:flex space-x-6 items-center">
@@ -77,7 +77,7 @@ export default function RootLayout({
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <FaHeart className="text-red-500 text-2xl" />
-                <h3 className="text-xl font-bold">The Agaries</h3>
+                <h3 className="text-xl font-bold">The Agariyas</h3>
               </div>
               <p className="text-gray-400 mb-4">
                 Empowering traditional salt farmers through sustainable support and community development.
@@ -159,7 +159,7 @@ export default function RootLayout({
           
           <div className="container mx-auto px-4 mt-8 pt-4 border-t border-gray-800 text-center">
             <p className="text-gray-500">
-              {new Date().getFullYear()} The Agaries. All Rights Reserved.
+              {new Date().getFullYear()} The Agariyas. All Rights Reserved.
             </p>
           </div>
         </footer>

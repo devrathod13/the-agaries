@@ -7,7 +7,7 @@ export default function ContactPage() {
       <div className="max-w-4xl mx-auto bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl shadow-xl overflow-hidden">
         <div className="p-8 sm:p-12">
           <h1 className="text-3xl sm:text-4xl font-bold text-center mb-8 text-white">
-            Contact The Agaries
+            Contact The Agariyas
           </h1>
 
           <div className="grid md:grid-cols-2 gap-8">
